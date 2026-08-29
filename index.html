@@ -14,61 +14,156 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <header class="topbar">
     <div>
       <div class="eyebrow" id="todayLabel">Aujourd'hui</div>
       <h1>CutTrack</h1>
     </div>
+
     <button class="icon-btn" id="settingsBtn" aria-label="Réglages">⚙️</button>
   </header>
 
   <main>
+
+    <!-- CALORIES -->
     <section class="hero card">
       <div class="hero-row">
         <div>
           <div class="muted">Calories restantes</div>
           <div class="big" id="calRemaining">2650</div>
-          <div class="muted"><span id="calConsumed">0</span> / <span id="calTarget">2650</span> kcal</div>
+
+          <div class="muted">
+            <span id="calConsumed">0</span> /
+            <span id="calTarget">2650</span> kcal
+          </div>
         </div>
+
         <div class="ring-wrap">
           <svg viewBox="0 0 120 120" class="ring">
             <circle cx="60" cy="60" r="48" class="ring-bg"></circle>
             <circle cx="60" cy="60" r="48" class="ring-progress" id="calRing"></circle>
           </svg>
-          <div class="ring-center"><span id="calPct">0</span>%</div>
+
+          <div class="ring-center">
+            <span id="calPct">0</span>%
+          </div>
         </div>
       </div>
     </section>
 
+    <!-- MACROS -->
     <section class="macros-grid" id="macroGrid"></section>
 
+    <!-- CALENDRIER -->
     <section class="card">
       <div class="section-head">
         <div>
-          <div class="eyebrow">Aujourd'hui</div>
+          <div class="eyebrow">Historique</div>
+          <h2>Calendrier</h2>
+        </div>
+
+        <button class="secondary" id="todayBtn">Aujourd'hui</button>
+      </div>
+
+      <div class="calendar-nav">
+        <button class="icon-btn" id="prevDayBtn">‹</button>
+
+        <input id="calendarDate" type="date" />
+
+        <button class="icon-btn" id="nextDayBtn">›</button>
+      </div>
+
+      <p class="hint">
+        Choisis une journée pour revoir ou modifier tes repas, ton entraînement et tes notes.
+      </p>
+    </section>
+
+    <!-- REPAS -->
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow" id="mealDayLabel">Aujourd'hui</div>
           <h2>Repas</h2>
         </div>
+
         <button class="primary" id="addFoodBtn">＋ Ajouter</button>
       </div>
+
       <div id="mealList" class="meal-list"></div>
     </section>
 
+    <!-- GYM -->
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Training</div>
+          <h2>Gym</h2>
+        </div>
+
+        <label class="gym-check">
+          <input type="checkbox" id="gymDone" />
+          <span>Fait ✓</span>
+        </label>
+      </div>
+
+      <label>
+        Entraînement
+        <select id="trainingType">
+          <option value="">Aucun</option>
+          <option>Push</option>
+          <option>Pull</option>
+          <option>Legs</option>
+          <option>Chest</option>
+          <option>Back</option>
+          <option>Shoulders</option>
+          <option>Arms</option>
+          <option>Full body</option>
+          <option>Cardio</option>
+          <option>Repos</option>
+          <option>Autre</option>
+        </select>
+      </label>
+
+      <label>
+        Notes sur le training
+        <textarea
+          id="trainingNotes"
+          placeholder="Ex. Bench 225 × 6, bonne énergie, nouveau PR..."
+        ></textarea>
+      </label>
+
+      <button class="secondary full" id="saveTrainingBtn">
+        Sauvegarder le training
+      </button>
+    </section>
+
+    <!-- EAU + POIDS -->
     <section class="two-col">
+
       <section class="card">
         <div class="section-head">
           <div>
             <div class="eyebrow">Hydratation</div>
             <h2>Eau</h2>
           </div>
-          <div class="small"><span id="waterNow">0</span> / <span id="waterGoal">3000</span> ml</div>
+
+          <div class="small">
+            <span id="waterNow">0</span> /
+            <span id="waterGoal">3000</span> ml
+          </div>
         </div>
+
         <div class="water-row">
           <button class="secondary" data-water="250">+250 ml</button>
           <button class="secondary" data-water="500">+500 ml</button>
           <button class="ghost" id="waterReset">Reset</button>
         </div>
-        <div class="bar"><div id="waterBar"></div></div>
+
+        <div class="bar">
+          <div id="waterBar"></div>
+        </div>
       </section>
 
       <section class="card">
@@ -77,17 +172,98 @@
             <div class="eyebrow">Progression</div>
             <h2>Poids</h2>
           </div>
+
           <button class="secondary" id="addWeightBtn">＋ Entrer</button>
         </div>
+
         <div class="metric-row">
-          <div><div class="muted">Dernier</div><div class="metric" id="lastWeight">—</div></div>
-          <div><div class="muted">Moy. 7 j</div><div class="metric" id="avgWeight">—</div></div>
-          <div><div class="muted">Variation</div><div class="metric" id="weightDelta">—</div></div>
+          <div>
+            <div class="muted">Dernier</div>
+            <div class="metric" id="lastWeight">—</div>
+          </div>
+
+          <div>
+            <div class="muted">Moy. 7 j</div>
+            <div class="metric" id="avgWeight">—</div>
+          </div>
+
+          <div>
+            <div class="muted">Variation</div>
+            <div class="metric" id="weightDelta">—</div>
+          </div>
         </div>
+
         <canvas id="weightChart" width="700" height="260"></canvas>
       </section>
+
     </section>
 
+    <!-- NOTES -->
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Journal</div>
+          <h2>Commentaire de la journée</h2>
+        </div>
+      </div>
+
+      <textarea
+        id="dailyComment"
+        placeholder="Comment s'est passée ta journée ? Faim, énergie, sommeil, motivation..."
+      ></textarea>
+
+      <button class="secondary full" id="saveCommentBtn">
+        Sauvegarder le commentaire
+      </button>
+    </section>
+
+    <!-- CHECKPOINTS -->
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Progression</div>
+          <h2>Checkpoints</h2>
+        </div>
+
+        <button class="primary" id="addCheckpointBtn">＋ Update</button>
+      </div>
+
+      <div id="checkpointList" class="checkpoint-list"></div>
+
+      <p class="hint">
+        Utilise les checkpoints pour garder une trace de ton évolution au fil des semaines.
+      </p>
+    </section>
+
+    <!-- RECETTES -->
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Meal prep</div>
+          <h2>Recettes</h2>
+        </div>
+      </div>
+
+      <div id="recipeGrid" class="recipe-grid"></div>
+    </section>
+
+    <!-- ÉPICERIE -->
+    <section class="card">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">Meal prep</div>
+          <h2>Liste d'épicerie</h2>
+        </div>
+
+        <button class="secondary" id="resetGroceryBtn">
+          Réinitialiser
+        </button>
+      </div>
+
+      <div id="groceryList" class="grocery-list"></div>
+    </section>
+
+    <!-- FAVORIS -->
     <section class="card">
       <div class="section-head">
         <div>
@@ -95,9 +271,11 @@
           <h2>Repas favoris</h2>
         </div>
       </div>
+
       <div id="presetGrid" class="preset-grid"></div>
     </section>
 
+    <!-- DONNÉES -->
     <section class="card">
       <div class="section-head">
         <div>
@@ -105,72 +283,274 @@
           <h2>Sauvegarde</h2>
         </div>
       </div>
+
       <div class="actions">
-        <button class="secondary" id="exportBtn">Exporter mes données</button>
-        <label class="secondary file-label">Importer
-          <input id="importInput" type="file" accept=".json,application/json" hidden />
+        <button class="secondary" id="exportBtn">
+          Exporter mes données
+        </button>
+
+        <label class="secondary file-label">
+          Importer
+          <input
+            id="importInput"
+            type="file"
+            accept=".json,application/json"
+            hidden
+          />
         </label>
-        <button class="ghost danger" id="resetAllBtn">Tout effacer</button>
+
+        <button class="ghost danger" id="resetAllBtn">
+          Tout effacer
+        </button>
       </div>
-      <p class="hint">Les données restent sur ton appareil via le stockage local du navigateur.</p>
+
+      <p class="hint">
+        Les données restent sur ton appareil via le stockage local du navigateur.
+      </p>
     </section>
+
   </main>
 
+  <!-- AJOUTER / MODIFIER REPAS -->
   <div class="modal hidden" id="foodModal">
     <div class="modal-card">
+
       <div class="section-head">
-        <h2>Ajouter un aliment / repas</h2>
+        <h2 id="foodModalTitle">Ajouter un aliment / repas</h2>
         <button class="icon-btn" data-close="foodModal">✕</button>
       </div>
+
       <form id="foodForm">
-        <label>Repas
+
+        <input id="foodEditId" type="hidden" />
+
+        <label>
+          Repas
           <select id="mealType">
-            <option>Petit-déjeuner</option><option>Déjeuner</option><option>Dîner</option><option>Collation</option>
+            <option>Petit-déjeuner</option>
+            <option>Déjeuner</option>
+            <option>Dîner</option>
+            <option>Collation</option>
           </select>
         </label>
-        <label>Nom<input id="foodName" required placeholder="Ex. Bowl poulet BBQ" /></label>
+
+        <label>
+          Nom
+          <input
+            id="foodName"
+            required
+            placeholder="Ex. Bowl poulet BBQ"
+          />
+        </label>
+
         <div class="form-grid">
-          <label>Calories<input id="foodCal" type="number" min="0" step="1" required /></label>
-          <label>Protéines (g)<input id="foodP" type="number" min="0" step="0.1" /></label>
-          <label>Glucides (g)<input id="foodC" type="number" min="0" step="0.1" /></label>
-          <label>Gras (g)<input id="foodF" type="number" min="0" step="0.1" /></label>
-          <label>Fibres (g)<input id="foodFi" type="number" min="0" step="0.1" /></label>
+
+          <label>
+            Calories
+            <input
+              id="foodCal"
+              type="number"
+              min="0"
+              step="1"
+              required
+            />
+          </label>
+
+          <label>
+            Protéines (g)
+            <input
+              id="foodP"
+              type="number"
+              min="0"
+              step="0.1"
+            />
+          </label>
+
+          <label>
+            Glucides (g)
+            <input
+              id="foodC"
+              type="number"
+              min="0"
+              step="0.1"
+            />
+          </label>
+
+          <label>
+            Gras (g)
+            <input
+              id="foodF"
+              type="number"
+              min="0"
+              step="0.1"
+            />
+          </label>
+
+          <label>
+            Fibres (g)
+            <input
+              id="foodFi"
+              type="number"
+              min="0"
+              step="0.1"
+            />
+          </label>
+
         </div>
-        <button class="primary full" type="submit">Ajouter</button>
+
+        <button class="primary full" type="submit" id="foodSubmitBtn">
+          Ajouter
+        </button>
+
       </form>
     </div>
   </div>
 
+  <!-- POIDS -->
   <div class="modal hidden" id="weightModal">
     <div class="modal-card">
+
       <div class="section-head">
         <h2>Entrer ton poids</h2>
         <button class="icon-btn" data-close="weightModal">✕</button>
       </div>
+
       <form id="weightForm">
-        <label>Date<input id="weightDate" type="date" required /></label>
-        <label>Poids (lb)<input id="weightValue" type="number" min="80" max="500" step="0.1" required /></label>
-        <button class="primary full" type="submit">Enregistrer</button>
+
+        <label>
+          Date
+          <input id="weightDate" type="date" required />
+        </label>
+
+        <label>
+          Poids (lb)
+          <input
+            id="weightValue"
+            type="number"
+            min="80"
+            max="500"
+            step="0.1"
+            required
+          />
+        </label>
+
+        <button class="primary full" type="submit">
+          Enregistrer
+        </button>
+
       </form>
     </div>
   </div>
 
+  <!-- CHECKPOINT -->
+  <div class="modal hidden" id="checkpointModal">
+    <div class="modal-card">
+
+      <div class="section-head">
+        <h2>Nouveau checkpoint</h2>
+        <button class="icon-btn" data-close="checkpointModal">✕</button>
+      </div>
+
+      <form id="checkpointForm">
+
+        <label>
+          Date
+          <input id="checkpointDate" type="date" required />
+        </label>
+
+        <label>
+          Poids (lb)
+          <input
+            id="checkpointWeight"
+            type="number"
+            min="80"
+            max="500"
+            step="0.1"
+          />
+        </label>
+
+        <label>
+          Tour de taille (optionnel)
+          <input
+            id="checkpointWaist"
+            type="number"
+            min="0"
+            step="0.1"
+            placeholder="Ex. 34"
+          />
+        </label>
+
+        <label>
+          Commentaire
+          <textarea
+            id="checkpointComment"
+            placeholder="Ex. Plus sec, force stable, vêtements plus lousses..."
+          ></textarea>
+        </label>
+
+        <button class="primary full" type="submit">
+          Ajouter le checkpoint
+        </button>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- RÉGLAGES -->
   <div class="modal hidden" id="settingsModal">
     <div class="modal-card">
+
       <div class="section-head">
         <h2>Objectifs</h2>
         <button class="icon-btn" data-close="settingsModal">✕</button>
       </div>
+
       <form id="settingsForm">
+
         <div class="form-grid">
-          <label>Calories<input id="setCal" type="number" min="1200" max="5000" /></label>
-          <label>Protéines (g)<input id="setP" type="number" min="50" max="400" /></label>
-          <label>Glucides (g)<input id="setC" type="number" min="50" max="700" /></label>
-          <label>Gras (g)<input id="setF" type="number" min="20" max="250" /></label>
-          <label>Fibres (g)<input id="setFi" type="number" min="10" max="100" /></label>
-          <label>Eau (ml)<input id="setWater" type="number" min="1000" max="7000" step="250" /></label>
+
+          <label>
+            Calories
+            <input id="setCal" type="number" min="1200" max="5000" />
+          </label>
+
+          <label>
+            Protéines (g)
+            <input id="setP" type="number" min="50" max="400" />
+          </label>
+
+          <label>
+            Glucides (g)
+            <input id="setC" type="number" min="50" max="700" />
+          </label>
+
+          <label>
+            Gras (g)
+            <input id="setF" type="number" min="20" max="250" />
+          </label>
+
+          <label>
+            Fibres (g)
+            <input id="setFi" type="number" min="10" max="100" />
+          </label>
+
+          <label>
+            Eau (ml)
+            <input
+              id="setWater"
+              type="number"
+              min="1000"
+              max="7000"
+              step="250"
+            />
+          </label>
+
         </div>
-        <button class="primary full" type="submit">Sauvegarder</button>
+
+        <button class="primary full" type="submit">
+          Sauvegarder
+        </button>
+
       </form>
     </div>
   </div>
