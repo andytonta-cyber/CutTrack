@@ -11,7 +11,9 @@
   --danger:#ff5f69;
 }
 
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+}
 
 body{
   margin:0;
@@ -107,8 +109,7 @@ main{
 
 .hint{
   font-size:13px;
-  margin-bottom:0;
-  line-height:1.5;
+  line-height:1.45;
 }
 
 .ring-wrap{
@@ -178,7 +179,11 @@ main{
 .bar>div{
   height:100%;
   width:0;
-  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  background:linear-gradient(
+    90deg,
+    var(--accent),
+    var(--accent2)
+  );
   border-radius:99px;
   transition:.3s;
 }
@@ -232,16 +237,88 @@ main{
   color:var(--danger);
 }
 
-.calendar-nav{
+/* CALENDRIER */
+
+.calendar-month-head{
   display:grid;
   grid-template-columns:auto 1fr auto;
   align-items:center;
   gap:10px;
+  margin-bottom:10px;
 }
 
-.calendar-nav input{
-  margin:0;
+.calendar-month-head strong{
+  text-align:center;
+  text-transform:capitalize;
 }
+
+.calendar-weekdays,
+.calendar-grid{
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:6px;
+}
+
+.calendar-weekdays{
+  margin-bottom:6px;
+}
+
+.calendar-weekdays span{
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+}
+
+.calendar-day{
+  position:relative;
+  aspect-ratio:1;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:#15181e;
+  color:var(--text);
+  font-weight:700;
+  padding:0;
+}
+
+.calendar-day.other{
+  opacity:.28;
+}
+
+.calendar-day.today{
+  border-color:var(--accent2);
+}
+
+.calendar-day.selected{
+  background:var(--accent);
+  border-color:var(--accent);
+}
+
+.calendar-day.has-data:after{
+  content:"";
+  position:absolute;
+  bottom:5px;
+  left:50%;
+  width:4px;
+  height:4px;
+  border-radius:99px;
+  background:var(--green);
+  transform:translateX(-50%);
+}
+
+.selected-day-line{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:12px;
+  font-size:13px;
+}
+
+.selected-day-line strong{
+  text-transform:capitalize;
+}
+
+/* REPAS */
 
 .meal-list{
   display:grid;
@@ -272,9 +349,9 @@ main{
 .food-row{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto auto auto;
-  gap:8px;
+  gap:7px;
   align-items:center;
-  padding:8px 0;
+  padding:9px 0;
   border-top:1px solid #2e343d;
 }
 
@@ -313,8 +390,8 @@ main{
   background:transparent;
   font-size:18px;
   cursor:pointer;
-  min-width:36px;
-  min-height:36px;
+  min-width:34px;
+  min-height:34px;
 }
 
 .edit-btn{
@@ -325,13 +402,70 @@ main{
   color:var(--danger);
 }
 
+/* RECHERCHE AUTOMATIQUE */
+
+.food-search-panel{
+  margin:14px 0;
+  padding:13px;
+  border:1px solid #333a45;
+  border-radius:16px;
+  background:#12151a;
+}
+
+.search-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  margin-top:8px;
+}
+
+.search-row input{
+  margin:0;
+}
+
+.food-search-results{
+  display:grid;
+  gap:8px;
+  margin-top:10px;
+}
+
+.search-result{
+  display:grid;
+  grid-template-columns:48px 1fr;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  text-align:left;
+  background:var(--card2);
+  border:1px solid var(--line);
+  border-radius:13px;
+  padding:9px;
+  color:var(--text);
+}
+
+.search-result img{
+  width:48px;
+  height:48px;
+  object-fit:contain;
+  background:white;
+  border-radius:8px;
+}
+
+.search-result span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-top:3px;
+}
+
+/* GYM */
+
 .gym-check{
   display:flex;
   align-items:center;
   gap:8px;
   color:var(--text);
   margin:0;
-  cursor:pointer;
 }
 
 .gym-check input{
@@ -339,6 +473,8 @@ main{
   margin:0;
   accent-color:var(--accent);
 }
+
+/* EAU / POIDS */
 
 .two-col{
   display:grid;
@@ -372,32 +508,7 @@ canvas{
   border-radius:14px;
 }
 
-.preset-grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:10px;
-}
-
-.preset{
-  background:var(--card2);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:14px;
-  cursor:pointer;
-  color:var(--text);
-  text-align:left;
-}
-
-.preset strong{
-  display:block;
-}
-
-.preset span{
-  display:block;
-  color:var(--muted);
-  font-size:12px;
-  margin-top:4px;
-}
+/* CHECKPOINTS */
 
 .checkpoint-list{
   display:grid;
@@ -413,8 +524,8 @@ canvas{
 
 .checkpoint-top{
   display:flex;
-  align-items:center;
   justify-content:space-between;
+  align-items:center;
   gap:10px;
 }
 
@@ -433,11 +544,13 @@ canvas{
   font-size:12px;
 }
 
-.checkpoint-comment{
+.checkpoint p{
   color:var(--muted);
   line-height:1.45;
   margin:10px 0 0;
 }
+
+/* RECETTES */
 
 .recipe-grid{
   display:grid;
@@ -455,14 +568,19 @@ canvas{
 .recipe-photo{
   display:grid;
   place-items:center;
-  min-height:120px;
-  background:
-    radial-gradient(circle at 30% 20%,rgba(255,179,71,.18),transparent 35%),
-    linear-gradient(135deg,#171a20,#232832);
+  min-height:150px;
+  background:linear-gradient(135deg,#171a20,#232832);
+  overflow:hidden;
 }
 
-.recipe-photo span{
-  font-size:54px;
+.recipe-photo img{
+  width:100%;
+  height:150px;
+  object-fit:cover;
+}
+
+.recipe-photo .emoji{
+  font-size:58px;
 }
 
 .recipe-body{
@@ -499,11 +617,60 @@ canvas{
   color:var(--muted);
 }
 
+.recipe-instructions{
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.4;
+  margin-top:10px;
+}
+
 .recipe-actions{
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
+  gap:7px;
   margin-top:12px;
+}
+
+/* FAVORIS */
+
+.preset-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+}
+
+.preset{
+  background:var(--card2);
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  cursor:pointer;
+  color:var(--text);
+  text-align:left;
+}
+
+.preset strong{
+  display:block;
+}
+
+.preset span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-top:4px;
+}
+
+/* ÉPICERIE */
+
+.inline-form{
+  display:grid;
+  grid-template-columns:1fr .55fr auto;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.inline-form input{
+  margin:0;
 }
 
 .grocery-list{
@@ -538,7 +705,11 @@ canvas{
   accent-color:var(--accent);
 }
 
-.grocery-checked span{
+.grocery-item small{
+  color:var(--muted);
+}
+
+.grocery-checked .grocery-text{
   text-decoration:line-through;
   color:var(--muted);
 }
@@ -555,6 +726,8 @@ canvas{
   color:var(--muted);
   font-size:13px;
 }
+
+/* MODALES */
 
 .modal{
   position:fixed;
@@ -601,7 +774,7 @@ textarea{
 }
 
 textarea{
-  min-height:110px;
+  min-height:105px;
   resize:vertical;
   line-height:1.4;
 }
@@ -615,6 +788,8 @@ textarea{
 .file-label{
   display:inline-block;
 }
+
+/* IPHONE / MOBILE */
 
 @media(max-width:720px){
   .macros-grid{
@@ -643,21 +818,35 @@ textarea{
   }
 
   .food-calories{
-    grid-column:2 / 4;
+    grid-column:2/4;
     grid-row:2;
     justify-self:end;
     font-size:13px;
-  }
-
-  .metric-row{
-    gap:6px;
   }
 
   .metric{
     font-size:18px;
   }
 
-  .recipe-photo{
-    min-height:100px;
+  .recipe-photo,
+  .recipe-photo img{
+    min-height:120px;
+    height:120px;
+  }
+
+  .inline-form{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .inline-form button{
+    grid-column:1/-1;
+  }
+
+  .search-row{
+    grid-template-columns:1fr;
+  }
+
+  .search-row button{
+    width:100%;
   }
 }
