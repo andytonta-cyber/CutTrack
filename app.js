@@ -1730,3 +1730,190 @@ if ("serviceWorker" in navigator) {
     .register("sw.js")
     .catch(() => {});
 }
+/* RECHERCHE AUTOMATIQUE D'ALIMENTS */
+
+(function initFoodSearch(){
+
+  const form = document.getElementById("foodForm");
+  const nameLabel = document.getElementById("foodName").closest("label");
+
+  if (!form || !nameLabel || document.getElementById("foodSearchBox")) return;
+
+  const box = document.createElement("div");
+  box.id = "foodSearchBox";
+
+  box.innerHTML = `
+    <div style="margin:12px 0;padding:12px;background:#20242c;border:1px solid #2a303a;border-radius:14px">
+      <div style="color:#ffb347;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">
+        Recherche automatique
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <input
+          id="foodSearchInput"
+          placeholder="Ex. yogourt grec, Cheerios..."
+          style="margin:0"
+        />
+
+        <button
+          type="button"
+          id="foodSearchBtn"
+          class="secondary"
+        >
+          Rechercher
+        </button>
+      </div>
+
+      <div id="foodSearchStatus" class="hint" style="margin-top:8px"></div>
+      <div id="foodSearchResults" style="display:grid;gap:8px;margin-top:10px"></div>
+    </div>
+  `;
+
+  nameLabel.parentNode.insertBefore(box, nameLabel);
+
+  const searchInput = document.getElementById("foodSearchInput");
+  const searchBtn = document.getElementById("foodSearchBtn");
+  const status = document.getElementById("foodSearchStatus");
+  const results = document.getElementById("foodSearchResults");
+
+  function nutrient(product, key) {
+    return Number(product?.nutriments?.[key] || 0);
+  }
+
+  searchBtn.onclick = async () => {
+
+    const query = searchInput.value.trim();
+
+    if (query.length < 2) {
+      status.textContent = "Écris au moins 2 lettres.";
+      return;
+    }
+
+    status.textContent = "Recherche...";
+    results.innerHTML = "";
+    searchBtn.disabled = true;
+
+    try {
+
+      const url =
+        "https://world.openfoodfacts.org/cgi/search.pl" +
+        "?search_terms=" + encodeURIComponent(query) +
+        "&search_simple=1" +
+        "&action=process" +
+        "&json=1" +
+        "&page_size=8" +
+        "&fields=product_name,brands,nutriments";
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error("Recherche impossible");
+      }
+
+      const data = await response.json();
+
+      const products = (data.products || []).filter(product =>
+        product.product_name &&
+        product.nutriments &&
+        (
+          product.nutriments["energy-kcal_100g"] ||
+          product.nutriments.proteins_100g
+        )
+      );
+
+      if (!products.length) {
+        status.textContent = "Aucun résultat trouvé.";
+        return;
+      }
+
+      status.textContent =
+        "Choisis un produit. Les valeurs sont calculées selon la quantité.";
+
+      products.forEach((product, index) => {
+
+        const cal = nutrient(product, "energy-kcal_100g");
+        const p = nutrient(product, "proteins_100g");
+        const c = nutrient(product, "carbohydrates_100g");
+        const f = nutrient(product, "fat_100g");
+        const fi = nutrient(product, "fiber_100g");
+
+        const button = document.createElement("button");
+
+        button.type = "button";
+        button.className = "preset";
+
+        button.innerHTML = `
+          <strong>${escapeHtml(product.product_name)}</strong>
+          <span>
+            ${product.brands ? escapeHtml(product.brands) + " • " : ""}
+            ${Math.round(cal)} kcal / 100 g
+          </span>
+        `;
+
+        button.onclick = () => {
+
+          let grams = prompt(
+            "Quelle quantité en grammes ?",
+            "100"
+          );
+
+          if (grams === null) return;
+
+          grams = Number(String(grams).replace(",", "."));
+
+          if (!grams || grams <= 0 || grams > 5000) {
+            alert("Quantité invalide.");
+            return;
+          }
+
+          const multiplier = grams / 100;
+
+          document.getElementById("foodName").value =
+            product.product_name;
+
+          document.getElementById("foodCal").value =
+            Math.round(cal * multiplier);
+
+          document.getElementById("foodP").value =
+            (p * multiplier).toFixed(1);
+
+          document.getElementById("foodC").value =
+            (c * multiplier).toFixed(1);
+
+          document.getElementById("foodF").value =
+            (f * multiplier).toFixed(1);
+
+          document.getElementById("foodFi").value =
+            (fi * multiplier).toFixed(1);
+
+          status.textContent =
+            `${product.product_name} — ${grams} g sélectionnés.`;
+
+          results.innerHTML = "";
+        };
+
+        results.appendChild(button);
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      status.textContent =
+        "La recherche ne répond pas pour le moment. Tu peux toujours entrer les valeurs manuellement.";
+
+    } finally {
+
+      searchBtn.disabled = false;
+
+    }
+  };
+
+  searchInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      searchBtn.click();
+    }
+  });
+
+})();
