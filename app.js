@@ -9,10 +9,12 @@ const localDateKey = (date = new Date()) => {
 
 const today = () => localDateKey();
 
-const uid = () => {
-  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
-  return Date.now().toString(36) + Math.random().toString(36).slice(2);
-};
+const uid = () =>
+  window.crypto?.randomUUID
+    ? crypto.randomUUID()
+    : Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+const clone = x => JSON.parse(JSON.stringify(x));
 
 const defaultState = {
   settings: {
@@ -25,11 +27,8 @@ const defaultState = {
   },
 
   days: {},
-
   weights: [],
-
   checkpoints: [],
-
   grocery: [],
 
   presets: [
@@ -73,188 +72,194 @@ const defaultState = {
 
   recipes: [
     {
-      id: "recipe-chicken-bowl",
-      emoji: "🍗",
+      id: "recipe-chicken",
       name: "Bol poulet BBQ",
+      emoji: "🍗",
+      image: "",
+      meal: "Déjeuner",
       cal: 650,
       p: 55,
       c: 72,
       f: 15,
       fi: 8,
-      meal: "Déjeuner",
       ingredients: [
         "Poitrine de poulet",
         "Riz",
         "Sauce BBQ",
         "Brocoli",
         "Poivron"
-      ]
+      ],
+      instructions:
+        "Cuire le poulet et le riz, ajouter les légumes et terminer avec la sauce BBQ."
     },
     {
-      id: "recipe-beef-sweetpotato",
-      emoji: "🥩",
+      id: "recipe-beef",
       name: "Bœuf + patate douce",
+      emoji: "🥩",
+      image: "",
+      meal: "Dîner",
       cal: 610,
       p: 50,
       c: 58,
       f: 18,
       fi: 9,
-      meal: "Dîner",
       ingredients: [
         "Bœuf haché maigre",
         "Patate douce",
         "Haricots verts",
         "Épices"
-      ]
+      ],
+      instructions:
+        "Cuire le bœuf, rôtir la patate douce et servir avec les légumes."
     },
     {
-      id: "recipe-greek-yogurt",
-      emoji: "🫐",
+      id: "recipe-yogurt",
       name: "Yogourt grec + fruits",
+      emoji: "🫐",
+      image: "",
+      meal: "Collation",
       cal: 310,
       p: 30,
       c: 34,
       f: 5,
       fi: 5,
-      meal: "Collation",
       ingredients: [
         "Yogourt grec",
         "Bleuets",
         "Fraises",
         "Granola"
-      ]
+      ],
+      instructions:
+        "Assembler dans un bol et ajouter le granola au moment de manger."
     },
     {
       id: "recipe-shake",
-      emoji: "🥤",
       name: "Shake protéiné + banane",
+      emoji: "🥤",
+      image: "",
+      meal: "Collation",
       cal: 360,
       p: 35,
       c: 45,
       f: 6,
       fi: 5,
-      meal: "Collation",
       ingredients: [
         "Protéine en poudre",
         "Banane",
         "Lait",
         "Glace"
-      ]
+      ],
+      instructions:
+        "Mélanger tous les ingrédients au blender."
     }
   ]
 };
 
-function cloneDefaults() {
-  return JSON.parse(JSON.stringify(defaultState));
-}
+function migrate(input) {
+  const s = input && typeof input === "object" ? input : {};
 
-let state;
+  s.settings = {
+    ...defaultState.settings,
+    ...(s.settings || {})
+  };
 
-try {
-  state = JSON.parse(localStorage.getItem(KEY) || "null");
-} catch {
-  state = null;
-}
+  s.days = s.days || {};
+  s.weights = Array.isArray(s.weights) ? s.weights : [];
+  s.checkpoints = Array.isArray(s.checkpoints)
+    ? s.checkpoints
+    : [];
+  s.grocery = Array.isArray(s.grocery) ? s.grocery : [];
 
-if (!state) state = cloneDefaults();
+  s.presets =
+    Array.isArray(s.presets) && s.presets.length
+      ? s.presets
+      : clone(defaultState.presets);
 
-/* MIGRATION DES ANCIENNES DONNÉES */
+  s.recipes =
+    Array.isArray(s.recipes) && s.recipes.length
+      ? s.recipes
+      : clone(defaultState.recipes);
 
-state.settings = {
-  ...defaultState.settings,
-  ...(state.settings || {})
-};
+  Object.values(s.days).forEach(d => {
+    d.foods = Array.isArray(d.foods) ? d.foods : [];
+    d.water = Number(d.water || 0);
 
-state.days = state.days || {};
-state.weights = Array.isArray(state.weights) ? state.weights : [];
-state.checkpoints = Array.isArray(state.checkpoints)
-  ? state.checkpoints
-  : [];
-
-state.grocery = Array.isArray(state.grocery)
-  ? state.grocery
-  : [];
-
-state.presets =
-  Array.isArray(state.presets) && state.presets.length
-    ? state.presets
-    : cloneDefaults().presets;
-
-state.recipes =
-  Array.isArray(state.recipes) && state.recipes.length
-    ? state.recipes
-    : cloneDefaults().recipes;
-
-Object.keys(state.days).forEach(date => {
-  const d = state.days[date];
-
-  d.foods = Array.isArray(d.foods) ? d.foods : [];
-  d.water = Number(d.water || 0);
-
-  if (!d.training) {
-    d.training = {
+    d.training = d.training || {
       done: false,
       type: "",
       notes: ""
     };
-  }
 
-  if (typeof d.comment !== "string") {
-    d.comment = "";
-  }
+    d.comment =
+      typeof d.comment === "string" ? d.comment : "";
 
-  d.foods.forEach(food => {
-    if (!food.id) food.id = uid();
+    d.foods.forEach(f => {
+      if (!f.id) f.id = uid();
+    });
   });
-});
+
+  s.recipes.forEach(r => {
+    if (!r.id) r.id = uid();
+
+    r.ingredients = Array.isArray(r.ingredients)
+      ? r.ingredients
+      : [];
+
+    r.instructions = r.instructions || "";
+    r.image = r.image || "";
+    r.emoji = r.emoji || "🍽️";
+  });
+
+  s.grocery.forEach(g => {
+    if (!g.id) g.id = uid();
+
+    g.checked = !!g.checked;
+    g.qty = g.qty || "";
+  });
+
+  return s;
+}
+
+let parsed = null;
+
+try {
+  parsed = JSON.parse(localStorage.getItem(KEY) || "null");
+} catch {}
+
+let state = migrate(parsed || clone(defaultState));
 
 let selectedDate = today();
+
+let calendarCursor = new Date();
+calendarCursor.setDate(1);
 
 function save() {
   localStorage.setItem(KEY, JSON.stringify(state));
 }
 
-function emptyDay() {
-  return {
-    foods: [],
-    water: 0,
-    training: {
-      done: false,
-      type: "",
-      notes: ""
-    },
-    comment: ""
-  };
-}
-
-function getDay(date = selectedDate) {
+function day(date = selectedDate) {
   if (!state.days[date]) {
-    state.days[date] = emptyDay();
-  }
-
-  const d = state.days[date];
-
-  d.foods = Array.isArray(d.foods) ? d.foods : [];
-
-  if (!d.training) {
-    d.training = {
-      done: false,
-      type: "",
-      notes: ""
+    state.days[date] = {
+      foods: [],
+      water: 0,
+      training: {
+        done: false,
+        type: "",
+        notes: ""
+      },
+      comment: ""
     };
   }
 
-  if (typeof d.comment !== "string") d.comment = "";
-
-  return d;
+  return state.days[date];
 }
 
-function fmt(n, decimals = 0) {
-  return Number(n || 0).toFixed(decimals);
+function fmt(n, d = 0) {
+  return Number(n || 0).toFixed(d);
 }
 
-function escapeHtml(value = "") {
-  return String(value)
+function esc(v = "") {
+  return String(v)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -262,21 +267,26 @@ function escapeHtml(value = "") {
     .replaceAll("'", "&#039;");
 }
 
-function parseDateKey(key) {
-  const [y, m, d] = key.split("-").map(Number);
+function parseKey(k) {
+  const [y, m, d] = k.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 
-function niceDate(key) {
-  return new Intl.DateTimeFormat("fr-CA", {
+function niceDate(
+  k,
+  opts = {
     weekday: "long",
     day: "numeric",
     month: "long"
-  }).format(parseDateKey(key));
+  }
+) {
+  return new Intl.DateTimeFormat("fr-CA", opts).format(
+    parseKey(k)
+  );
 }
 
 function totals(date = selectedDate) {
-  return getDay(date).foods.reduce(
+  return day(date).foods.reduce(
     (a, x) => ({
       cal: a.cal + Number(x.cal || 0),
       p: a.p + Number(x.p || 0),
@@ -294,6 +304,14 @@ function totals(date = selectedDate) {
   );
 }
 
+function openModal(id) {
+  document.getElementById(id)?.classList.remove("hidden");
+}
+
+function closeModal(id) {
+  document.getElementById(id)?.classList.add("hidden");
+}
+
 const macroDefs = [
   ["Protéines", "p", "g"],
   ["Glucides", "c", "g"],
@@ -302,7 +320,7 @@ const macroDefs = [
 ];
 
 function render() {
-  const currentDay = getDay();
+  const d = day();
   const t = totals();
   const s = state.settings;
 
@@ -314,16 +332,17 @@ function render() {
       : `Historique · ${niceDate(selectedDate)}`;
 
   document.getElementById("mealDayLabel").textContent =
-    viewingToday ? "Aujourd'hui" : niceDate(selectedDate);
+    viewingToday
+      ? "Aujourd'hui"
+      : niceDate(selectedDate);
 
-  document.getElementById("calendarDate").value =
-    selectedDate;
+  document.getElementById("selectedDayLabel").textContent =
+    niceDate(selectedDate);
 
   document.getElementById("calConsumed").textContent =
     Math.round(t.cal);
 
-  document.getElementById("calTarget").textContent =
-    s.cal;
+  document.getElementById("calTarget").textContent = s.cal;
 
   document.getElementById("calRemaining").textContent =
     Math.max(0, Math.round(s.cal - t.cal));
@@ -338,49 +357,141 @@ function render() {
   document.getElementById("calRing").style.strokeDashoffset =
     301.59 * (1 - pct / 100);
 
-  renderMacros(t);
-  renderMeals();
-  renderTraining();
-  renderWater();
-  renderWeights();
-  renderPresets();
-  renderCheckpoints();
-  renderRecipes();
-  renderGrocery();
+  const mg = document.getElementById("macroGrid");
 
-  document.getElementById("dailyComment").value =
-    currentDay.comment || "";
-}
+  mg.innerHTML = "";
 
-function renderMacros(t) {
-  const grid = document.getElementById("macroGrid");
+  macroDefs.forEach(([name, k, u]) => {
+    const val = t[k];
+    const goal = s[k];
 
-  grid.innerHTML = "";
+    const p = Math.min(
+      100,
+      (val / goal) * 100 || 0
+    );
 
-  macroDefs.forEach(([name, key, unit]) => {
-    const val = Number(t[key] || 0);
-    const goal = Number(state.settings[key] || 0);
-
-    const pct = goal
-      ? Math.min(100, (val / goal) * 100)
-      : 0;
-
-    grid.insertAdjacentHTML(
+    mg.insertAdjacentHTML(
       "beforeend",
       `
       <div class="macro">
         <div class="muted">${name}</div>
         <div class="value">
-          ${fmt(val)} / ${goal}${unit}
+          ${fmt(val)} / ${goal}${u}
         </div>
         <div class="bar">
-          <div style="width:${pct}%"></div>
+          <div style="width:${p}%"></div>
         </div>
       </div>
       `
     );
   });
+
+  renderCalendar();
+  renderMeals();
+  renderTraining();
+  renderWater();
+  renderWeights();
+  renderCheckpoints();
+  renderRecipes();
+  renderGrocery();
+  renderPresets();
+
+  document.getElementById("dailyComment").value =
+    d.comment || "";
 }
+
+/* CALENDRIER */
+
+function hasDayData(k) {
+  const d = state.days[k];
+
+  return !!(
+    d &&
+    (
+      d.foods?.length ||
+      d.water ||
+      d.training?.done ||
+      d.training?.type ||
+      d.training?.notes ||
+      d.comment
+    )
+  ) || state.weights.some(w => w.date === k);
+}
+
+function renderCalendar() {
+  const y = calendarCursor.getFullYear();
+  const m = calendarCursor.getMonth();
+
+  document.getElementById(
+    "calendarMonthLabel"
+  ).textContent =
+    new Intl.DateTimeFormat("fr-CA", {
+      month: "long",
+      year: "numeric"
+    }).format(calendarCursor);
+
+  const grid =
+    document.getElementById("calendarGrid");
+
+  grid.innerHTML = "";
+
+  const first = new Date(y, m, 1);
+
+  const mondayIndex =
+    (first.getDay() + 6) % 7;
+
+  const start =
+    new Date(y, m, 1 - mondayIndex);
+
+  for (let i = 0; i < 42; i++) {
+    const date = new Date(start);
+
+    date.setDate(start.getDate() + i);
+
+    const k = localDateKey(date);
+
+    const b = document.createElement("button");
+
+    b.type = "button";
+    b.className = "calendar-day";
+
+    if (date.getMonth() !== m) {
+      b.classList.add("other");
+    }
+
+    if (k === today()) {
+      b.classList.add("today");
+    }
+
+    if (k === selectedDate) {
+      b.classList.add("selected");
+    }
+
+    if (hasDayData(k)) {
+      b.classList.add("has-data");
+    }
+
+    b.textContent = date.getDate();
+    b.dataset.date = k;
+
+    b.onclick = () => {
+      selectedDate = k;
+
+      calendarCursor =
+        new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          1
+        );
+
+      render();
+    };
+
+    grid.appendChild(b);
+  }
+}
+
+/* REPAS */
 
 function renderMeals() {
   const groups = [
@@ -390,24 +501,25 @@ function renderMeals() {
     "Collation"
   ];
 
-  const list = document.getElementById("mealList");
+  const list =
+    document.getElementById("mealList");
 
   list.innerHTML = "";
 
-  groups.forEach(group => {
-    const items = getDay().foods.filter(
-      x => x.meal === group
-    );
+  groups.forEach(g => {
+    const items =
+      day().foods.filter(x => x.meal === g);
 
-    const calories = items.reduce(
-      (a, x) => a + Number(x.cal || 0),
-      0
-    );
+    const calories =
+      items.reduce(
+        (a, x) => a + Number(x.cal || 0),
+        0
+      );
 
     let html = `
       <div class="meal">
         <div class="meal-head">
-          <h3>${group}</h3>
+          <h3>${g}</h3>
           <strong>${Math.round(calories)} kcal</strong>
         </div>
         <div class="meal-items">
@@ -421,83 +533,75 @@ function renderMeals() {
       `;
     }
 
-    items.forEach(food => {
+    items.forEach(x => {
       html += `
         <div class="food-row">
-
           <button
             class="food-main edit-food"
-            data-id="${food.id}"
+            data-id="${x.id}"
             type="button"
           >
-            <strong>${escapeHtml(food.name)}</strong>
-
+            <strong>${esc(x.name)}</strong>
             <div class="food-macros">
-              ${fmt(food.p)}P •
-              ${fmt(food.c)}G •
-              ${fmt(food.f)}L •
-              ${fmt(food.fi)} fibres
+              ${fmt(x.p)}P •
+              ${fmt(x.c)}G •
+              ${fmt(x.f)}L •
+              ${fmt(x.fi)} fibres
             </div>
           </button>
 
           <div class="food-calories">
-            ${Math.round(food.cal)} kcal
+            ${Math.round(x.cal)} kcal
           </div>
 
           <button
-            class="edit-food edit-btn"
-            data-id="${food.id}"
+            class="edit-btn edit-food"
+            data-id="${x.id}"
             type="button"
-            aria-label="Modifier"
           >
             ✎
           </button>
 
           <button
-            class="delete-food delete"
-            data-id="${food.id}"
+            class="delete delete-food"
+            data-id="${x.id}"
             type="button"
-            aria-label="Supprimer"
           >
             ×
           </button>
-
         </div>
       `;
     });
 
     html += "</div></div>";
 
-    list.insertAdjacentHTML("beforeend", html);
+    list.insertAdjacentHTML(
+      "beforeend",
+      html
+    );
   });
 
   document
     .querySelectorAll(".edit-food")
-    .forEach(button => {
-      button.onclick = () =>
-        openFoodForEdit(button.dataset.id);
+    .forEach(b => {
+      b.onclick = () =>
+        openFoodEdit(b.dataset.id);
     });
 
   document
     .querySelectorAll(".delete-food")
-    .forEach(button => {
-      button.onclick = () => {
-        const id = button.dataset.id;
-
-        const food = getDay().foods.find(
-          x => x.id === id
+    .forEach(b => {
+      b.onclick = () => {
+        const f = day().foods.find(
+          x => x.id === b.dataset.id
         );
 
-        if (!food) return;
+        if (!f) return;
 
-        if (
-          confirm(
-            `Supprimer « ${food.name} » de cette journée ?`
-          )
-        ) {
-          getDay().foods =
-            getDay().foods.filter(
-              x => x.id !== id
+        if (confirm(`Supprimer « ${f.name} » ?`)) {
+          day().foods =
+            day().foods.filter(
+              x => x.id !== b.dataset.id
             );
 
           save();
@@ -507,555 +611,8 @@ function renderMeals() {
     });
 }
 
-function renderTraining() {
-  const training = getDay().training;
-
-  document.getElementById("gymDone").checked =
-    Boolean(training.done);
-
-  document.getElementById("trainingType").value =
-    training.type || "";
-
-  document.getElementById("trainingNotes").value =
-    training.notes || "";
-}
-
-function renderWater() {
-  const d = getDay();
-  const goal = state.settings.water;
-
-  document.getElementById("waterNow").textContent =
-    d.water;
-
-  document.getElementById("waterGoal").textContent =
-    goal;
-
-  document.getElementById("waterBar").style.width =
-    Math.min(
-      100,
-      goal ? (d.water / goal) * 100 : 0
-    ) + "%";
-}
-
-function renderPresets() {
-  const grid = document.getElementById("presetGrid");
-
-  grid.innerHTML = "";
-
-  state.presets.forEach((preset, i) => {
-    grid.insertAdjacentHTML(
-      "beforeend",
-      `
-      <button
-        class="preset"
-        data-preset="${i}"
-        type="button"
-      >
-        <strong>
-          ${escapeHtml(preset.name)}
-        </strong>
-
-        <span>
-          ${preset.cal} kcal •
-          ${preset.p}P •
-          ${preset.c}G •
-          ${preset.f}L
-        </span>
-      </button>
-      `
-    );
-  });
-
-  document
-    .querySelectorAll("[data-preset]")
-    .forEach(el => {
-      el.onclick = () => {
-        const preset =
-          state.presets[
-            Number(el.dataset.preset)
-          ];
-
-        getDay().foods.push({
-          ...preset,
-          id: uid()
-        });
-
-        save();
-        render();
-      };
-    });
-}
-
-function renderWeights() {
-  const weights = [...state.weights].sort(
-    (a, b) => a.date.localeCompare(b.date)
-  );
-
-  const last = weights.at(-1);
-
-  document.getElementById("lastWeight").textContent =
-    last
-      ? Number(last.value).toFixed(1) + " lb"
-      : "—";
-
-  const last7 = weights.slice(-7);
-
-  const avg =
-    last7.length
-      ? last7.reduce(
-          (a, x) => a + Number(x.value),
-          0
-        ) / last7.length
-      : null;
-
-  document.getElementById("avgWeight").textContent =
-    avg
-      ? avg.toFixed(1) + " lb"
-      : "—";
-
-  const delta =
-    weights.length > 1
-      ? Number(weights.at(-1).value) -
-        Number(weights[0].value)
-      : null;
-
-  document.getElementById(
-    "weightDelta"
-  ).textContent =
-    delta === null
-      ? "—"
-      : `${
-          delta > 0 ? "+" : ""
-        }${delta.toFixed(1)} lb`;
-
-  drawChart(weights.slice(-30));
-}
-
-function drawChart(weights) {
-  const canvas =
-    document.getElementById("weightChart");
-
-  const ctx = canvas.getContext("2d");
-
-  const W = canvas.width;
-  const H = canvas.height;
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = "#13161b";
-  ctx.fillRect(0, 0, W, H);
-
-  if (weights.length < 2) {
-    ctx.fillStyle = "#9aa3b2";
-    ctx.font = "22px -apple-system";
-
-    ctx.fillText(
-      "Entre au moins 2 poids pour voir la courbe",
-      28,
-      130
-    );
-
-    return;
-  }
-
-  const vals = weights.map(
-    x => Number(x.value)
-  );
-
-  const min = Math.min(...vals) - 1;
-  const max = Math.max(...vals) + 1;
-
-  ctx.strokeStyle = "#ff6b35";
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-
-  weights.forEach((x, i) => {
-    const px =
-      30 +
-      i *
-        ((W - 60) /
-          (weights.length - 1));
-
-    const py =
-      H -
-      30 -
-      ((Number(x.value) - min) /
-        (max - min)) *
-        (H - 60);
-
-    if (i) ctx.lineTo(px, py);
-    else ctx.moveTo(px, py);
-  });
-
-  ctx.stroke();
-}
-
-function renderCheckpoints() {
-  const list =
-    document.getElementById("checkpointList");
-
-  const checkpoints = [
-    ...state.checkpoints
-  ].sort((a, b) =>
-    b.date.localeCompare(a.date)
-  );
-
-  list.innerHTML = "";
-
-  if (!checkpoints.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <strong>Aucun checkpoint encore</strong>
-        <span>
-          Fais ton premier update quand tu veux.
-        </span>
-      </div>
-    `;
-
-    return;
-  }
-
-  checkpoints.forEach(cp => {
-    list.insertAdjacentHTML(
-      "beforeend",
-      `
-      <div class="checkpoint">
-
-        <div class="checkpoint-top">
-          <strong>
-            ${escapeHtml(niceDate(cp.date))}
-          </strong>
-
-          <button
-            class="delete checkpoint-delete"
-            data-id="${cp.id}"
-            type="button"
-          >
-            ×
-          </button>
-        </div>
-
-        <div class="checkpoint-stats">
-          ${
-            cp.weight
-              ? `<span>⚖️ ${Number(
-                  cp.weight
-                ).toFixed(1)} lb</span>`
-              : ""
-          }
-
-          ${
-            cp.waist
-              ? `<span>📏 ${escapeHtml(
-                  cp.waist
-                )}</span>`
-              : ""
-          }
-        </div>
-
-        ${
-          cp.comment
-            ? `
-            <p class="checkpoint-comment">
-              ${escapeHtml(cp.comment)}
-            </p>
-          `
-            : ""
-        }
-
-      </div>
-      `
-    );
-  });
-
-  document
-    .querySelectorAll(".checkpoint-delete")
-    .forEach(button => {
-      button.onclick = () => {
-        if (
-          confirm(
-            "Supprimer ce checkpoint ?"
-          )
-        ) {
-          state.checkpoints =
-            state.checkpoints.filter(
-              cp =>
-                cp.id !==
-                button.dataset.id
-            );
-
-          save();
-          renderCheckpoints();
-        }
-      };
-    });
-}
-
-function renderRecipes() {
-  const grid =
-    document.getElementById("recipeGrid");
-
-  grid.innerHTML = "";
-
-  state.recipes.forEach(recipe => {
-    grid.insertAdjacentHTML(
-      "beforeend",
-      `
-      <article class="recipe-card">
-
-        <div class="recipe-photo">
-          <span>${recipe.emoji || "🍽️"}</span>
-        </div>
-
-        <div class="recipe-body">
-
-          <div class="recipe-top">
-            <strong>
-              ${escapeHtml(recipe.name)}
-            </strong>
-
-            <span class="recipe-cal">
-              ${recipe.cal} kcal
-            </span>
-          </div>
-
-          <div class="food-macros">
-            ${recipe.p}P •
-            ${recipe.c}G •
-            ${recipe.f}L
-          </div>
-
-          <div class="recipe-ingredients">
-            ${recipe.ingredients
-              .map(
-                ingredient =>
-                  `<span>${escapeHtml(
-                    ingredient
-                  )}</span>`
-              )
-              .join("")}
-          </div>
-
-          <div class="recipe-actions">
-
-            <button
-              class="secondary recipe-add-meal"
-              data-id="${recipe.id}"
-              type="button"
-            >
-              ＋ Au repas
-            </button>
-
-            <button
-              class="ghost recipe-add-grocery"
-              data-id="${recipe.id}"
-              type="button"
-            >
-              🛒 Épicerie
-            </button>
-
-          </div>
-
-        </div>
-      </article>
-      `
-    );
-  });
-
-  document
-    .querySelectorAll(
-      ".recipe-add-meal"
-    )
-    .forEach(button => {
-      button.onclick = () => {
-        const recipe =
-          state.recipes.find(
-            r =>
-              r.id ===
-              button.dataset.id
-          );
-
-        if (!recipe) return;
-
-        getDay().foods.push({
-          id: uid(),
-          name: recipe.name,
-          meal: recipe.meal,
-          cal: recipe.cal,
-          p: recipe.p,
-          c: recipe.c,
-          f: recipe.f,
-          fi: recipe.fi || 0
-        });
-
-        save();
-        render();
-
-        alert(
-          `${recipe.name} ajouté à ${recipe.meal}.`
-        );
-      };
-    });
-
-  document
-    .querySelectorAll(
-      ".recipe-add-grocery"
-    )
-    .forEach(button => {
-      button.onclick = () => {
-        const recipe =
-          state.recipes.find(
-            r =>
-              r.id ===
-              button.dataset.id
-          );
-
-        if (!recipe) return;
-
-        recipe.ingredients.forEach(
-          ingredient => {
-            const exists =
-              state.grocery.find(
-                item =>
-                  item.name.toLowerCase() ===
-                  ingredient.toLowerCase()
-              );
-
-            if (!exists) {
-              state.grocery.push({
-                id: uid(),
-                name: ingredient,
-                checked: false
-              });
-            }
-          }
-        );
-
-        save();
-        renderGrocery();
-
-        alert(
-          `Ingrédients de ${recipe.name} ajoutés à l'épicerie.`
-        );
-      };
-    });
-}
-
-function renderGrocery() {
-  const list =
-    document.getElementById("groceryList");
-
-  list.innerHTML = "";
-
-  if (!state.grocery.length) {
-    list.innerHTML = `
-      <div class="empty-state">
-        <strong>Liste vide</strong>
-        <span>
-          Ajoute une recette à l'épicerie pour commencer.
-        </span>
-      </div>
-    `;
-
-    return;
-  }
-
-  state.grocery.forEach(item => {
-    list.insertAdjacentHTML(
-      "beforeend",
-      `
-      <div
-        class="grocery-item ${
-          item.checked
-            ? "grocery-checked"
-            : ""
-        }"
-      >
-
-        <label>
-          <input
-            class="grocery-check"
-            data-id="${item.id}"
-            type="checkbox"
-            ${
-              item.checked
-                ? "checked"
-                : ""
-            }
-          />
-
-          <span>
-            ${escapeHtml(item.name)}
-          </span>
-        </label>
-
-        <button
-          class="delete grocery-delete"
-          data-id="${item.id}"
-          type="button"
-        >
-          ×
-        </button>
-
-      </div>
-      `
-    );
-  });
-
-  document
-    .querySelectorAll(".grocery-check")
-    .forEach(input => {
-      input.onchange = () => {
-        const item =
-          state.grocery.find(
-            x =>
-              x.id ===
-              input.dataset.id
-          );
-
-        if (!item) return;
-
-        item.checked = input.checked;
-
-        save();
-        renderGrocery();
-      };
-    });
-
-  document
-    .querySelectorAll(".grocery-delete")
-    .forEach(button => {
-      button.onclick = () => {
-        state.grocery =
-          state.grocery.filter(
-            item =>
-              item.id !==
-              button.dataset.id
-          );
-
-        save();
-        renderGrocery();
-      };
-    });
-}
-
-function openModal(id) {
-  document
-    .getElementById(id)
-    .classList.remove("hidden");
-}
-
-function closeModal(id) {
-  document
-    .getElementById(id)
-    .classList.add("hidden");
-}
-
 function resetFoodForm() {
-  const form =
-    document.getElementById("foodForm");
-
-  form.reset();
+  document.getElementById("foodForm").reset();
 
   document.getElementById(
     "foodEditId"
@@ -1068,104 +625,980 @@ function resetFoodForm() {
 
   document.getElementById(
     "foodSubmitBtn"
+  ).textContent = "Ajouter";
+
+  document.getElementById(
+    "foodSearchResults"
+  ).innerHTML = "";
+
+  document.getElementById(
+    "foodSearchStatus"
   ).textContent =
-    "Ajouter";
+    "Cherche un produit puis choisis la quantité.";
 }
 
-function openFoodForEdit(id) {
-  const food =
-    getDay().foods.find(
-      x => x.id === id
-    );
+function openFoodEdit(id) {
+  const f = day().foods.find(
+    x => x.id === id
+  );
 
-  if (!food) return;
+  if (!f) return;
 
-  document.getElementById(
-    "foodEditId"
-  ).value = food.id;
+  document.getElementById("foodEditId").value =
+    f.id;
 
-  document.getElementById(
-    "mealType"
-  ).value = food.meal;
+  document.getElementById("mealType").value =
+    f.meal;
 
-  document.getElementById(
-    "foodName"
-  ).value = food.name;
+  document.getElementById("foodName").value =
+    f.name;
 
-  document.getElementById(
-    "foodCal"
-  ).value = food.cal;
+  document.getElementById("foodCal").value =
+    f.cal;
 
-  document.getElementById(
-    "foodP"
-  ).value = food.p || 0;
+  document.getElementById("foodP").value =
+    f.p || 0;
 
-  document.getElementById(
-    "foodC"
-  ).value = food.c || 0;
+  document.getElementById("foodC").value =
+    f.c || 0;
 
-  document.getElementById(
-    "foodF"
-  ).value = food.f || 0;
+  document.getElementById("foodF").value =
+    f.f || 0;
 
-  document.getElementById(
-    "foodFi"
-  ).value = food.fi || 0;
+  document.getElementById("foodFi").value =
+    f.fi || 0;
 
   document.getElementById(
     "foodModalTitle"
-  ).textContent =
-    "Modifier le repas";
+  ).textContent = "Modifier le repas";
 
   document.getElementById(
     "foodSubmitBtn"
-  ).textContent =
-    "Sauvegarder";
+  ).textContent = "Sauvegarder";
 
   openModal("foodModal");
 }
 
-/* NAVIGATION JOURNAL */
+/* RECHERCHE AUTOMATIQUE OPEN FOOD FACTS */
 
-document.getElementById(
-  "calendarDate"
-).onchange = e => {
-  if (!e.target.value) return;
+async function searchFoods() {
+  const input =
+    document.getElementById("foodSearchInput");
 
-  selectedDate = e.target.value;
-  render();
-};
+  const button =
+    document.getElementById("foodSearchBtn");
 
-document.getElementById(
-  "todayBtn"
-).onclick = () => {
-  selectedDate = today();
-  render();
-};
+  const status =
+    document.getElementById("foodSearchStatus");
 
-document.getElementById(
-  "prevDayBtn"
-).onclick = () => {
-  const d = parseDateKey(selectedDate);
-  d.setDate(d.getDate() - 1);
+  const results =
+    document.getElementById("foodSearchResults");
 
-  selectedDate = localDateKey(d);
+  const q = input.value.trim();
 
-  render();
-};
+  if (q.length < 2) {
+    status.textContent =
+      "Écris au moins 2 lettres.";
 
-document.getElementById(
-  "nextDayBtn"
-).onclick = () => {
-  const d = parseDateKey(selectedDate);
-  d.setDate(d.getDate() + 1);
+    return;
+  }
 
-  selectedDate = localDateKey(d);
+  status.textContent = "Recherche...";
+  results.innerHTML = "";
+  button.disabled = true;
 
-  render();
-};
+  try {
+    const url =
+      "https://world.openfoodfacts.org/cgi/search.pl" +
+      "?search_terms=" +
+      encodeURIComponent(q) +
+      "&search_simple=1" +
+      "&action=process" +
+      "&json=1" +
+      "&page_size=10" +
+      "&fields=product_name,brands,image_front_small_url,nutriments";
 
-/* REPAS */
+    const res = await fetch(url, {
+      cache: "no-store"
+    });
+
+    if (!res.ok) {
+      throw new Error("HTTP");
+    }
+
+    const data = await res.json();
+
+    const products =
+      (data.products || []).filter(p => {
+        return (
+          p.product_name &&
+          p.nutriments &&
+          (
+            p.nutriments[
+              "energy-kcal_100g"
+            ] != null ||
+            p.nutriments.proteins_100g != null
+          )
+        );
+      });
+
+    if (!products.length) {
+      status.textContent =
+        "Aucun résultat trouvé.";
+
+      return;
+    }
+
+    status.textContent =
+      "Choisis le bon produit.";
+
+    products.forEach(p => {
+      const n = p.nutriments || {};
+
+      const cal =
+        Number(
+          n["energy-kcal_100g"] || 0
+        );
+
+      const protein =
+        Number(n.proteins_100g || 0);
+
+      const carbs =
+        Number(
+          n.carbohydrates_100g || 0
+        );
+
+      const fat =
+        Number(n.fat_100g || 0);
+
+      const fiber =
+        Number(n.fiber_100g || 0);
+
+      const b =
+        document.createElement("button");
+
+      b.type = "button";
+      b.className = "search-result";
+
+      const image =
+        p.image_front_small_url
+          ? `
+            <img
+              src="${esc(p.image_front_small_url)}"
+              alt=""
+            >
+          `
+          : "<div></div>";
+
+      b.innerHTML = `
+        ${image}
+
+        <div>
+          <strong>
+            ${esc(p.product_name)}
+          </strong>
+
+          <span>
+            ${
+              p.brands
+                ? esc(p.brands) + " • "
+                : ""
+            }
+            ${Math.round(cal)} kcal / 100 g
+          </span>
+        </div>
+      `;
+
+      b.onclick = () => {
+        let grams = prompt(
+          "Quelle quantité en grammes ?",
+          "100"
+        );
+
+        if (grams === null) return;
+
+        grams = Number(
+          String(grams).replace(",", ".")
+        );
+
+        if (
+          !grams ||
+          grams <= 0 ||
+          grams > 5000
+        ) {
+          alert("Quantité invalide.");
+          return;
+        }
+
+        const mult = grams / 100;
+
+        document.getElementById(
+          "foodName"
+        ).value = p.product_name;
+
+        document.getElementById(
+          "foodCal"
+        ).value =
+          Math.round(cal * mult);
+
+        document.getElementById(
+          "foodP"
+        ).value =
+          (protein * mult).toFixed(1);
+
+        document.getElementById(
+          "foodC"
+        ).value =
+          (carbs * mult).toFixed(1);
+
+        document.getElementById(
+          "foodF"
+        ).value =
+          (fat * mult).toFixed(1);
+
+        document.getElementById(
+          "foodFi"
+        ).value =
+          (fiber * mult).toFixed(1);
+
+        status.textContent =
+          `${p.product_name} — ${grams} g`;
+
+        results.innerHTML = "";
+      };
+
+      results.appendChild(b);
+    });
+  } catch (e) {
+    console.error(e);
+
+    status.textContent =
+      "Recherche indisponible pour le moment. " +
+      "L'entrée manuelle reste disponible.";
+  } finally {
+    button.disabled = false;
+  }
+}
+
+/* GYM */
+
+function renderTraining() {
+  const t =
+    day().training || {
+      done: false,
+      type: "",
+      notes: ""
+    };
+
+  document.getElementById(
+    "gymDone"
+  ).checked = !!t.done;
+
+  document.getElementById(
+    "trainingType"
+  ).value = t.type || "";
+
+  document.getElementById(
+    "trainingNotes"
+  ).value = t.notes || "";
+}
+
+/* EAU */
+
+function renderWater() {
+  document.getElementById(
+    "waterNow"
+  ).textContent = day().water;
+
+  document.getElementById(
+    "waterGoal"
+  ).textContent = state.settings.water;
+
+  document.getElementById(
+    "waterBar"
+  ).style.width =
+    Math.min(
+      100,
+      (
+        day().water /
+        state.settings.water
+      ) * 100 || 0
+    ) + "%";
+}
+
+/* POIDS */
+
+function renderWeights() {
+  const w =
+    [...state.weights].sort(
+      (a, b) =>
+        a.date.localeCompare(b.date)
+    );
+
+  const last = w.at(-1);
+
+  document.getElementById(
+    "lastWeight"
+  ).textContent =
+    last
+      ? Number(last.value).toFixed(1) +
+        " lb"
+      : "—";
+
+  const last7 = w.slice(-7);
+
+  const avg =
+    last7.length
+      ? last7.reduce(
+          (a, x) =>
+            a + Number(x.value),
+          0
+        ) / last7.length
+      : null;
+
+  document.getElementById(
+    "avgWeight"
+  ).textContent =
+    avg
+      ? avg.toFixed(1) + " lb"
+      : "—";
+
+  const delta =
+    w.length > 1
+      ? Number(w.at(-1).value) -
+        Number(w[0].value)
+      : null;
+
+  document.getElementById(
+    "weightDelta"
+  ).textContent =
+    delta === null
+      ? "—"
+      : `${delta > 0 ? "+" : ""}${delta.toFixed(1)} lb`;
+
+  drawChart(w.slice(-30));
+}
+
+function drawChart(w) {
+  const c =
+    document.getElementById(
+      "weightChart"
+    );
+
+  const ctx = c.getContext("2d");
+
+  const W = c.width;
+  const H = c.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = "#13161b";
+  ctx.fillRect(0, 0, W, H);
+
+  if (w.length < 2) {
+    ctx.fillStyle = "#9aa3b2";
+    ctx.font =
+      "22px -apple-system";
+
+    ctx.fillText(
+      "Entre au moins 2 poids pour voir la courbe",
+      28,
+      130
+    );
+
+    return;
+  }
+
+  const vals =
+    w.map(x => Number(x.value));
+
+  const min =
+    Math.min(...vals) - 1;
+
+  const max =
+    Math.max(...vals) + 1;
+
+  ctx.strokeStyle = "#ff6b35";
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+
+  w.forEach((x, i) => {
+    const px =
+      30 +
+      i *
+        ((W - 60) /
+          (w.length - 1));
+
+    const py =
+      H -
+      30 -
+      (
+        (Number(x.value) - min) /
+        (max - min)
+      ) *
+        (H - 60);
+
+    if (i) {
+      ctx.lineTo(px, py);
+    } else {
+      ctx.moveTo(px, py);
+    }
+  });
+
+  ctx.stroke();
+}
+
+/* CHECKPOINTS */
+
+function renderCheckpoints() {
+  const list =
+    document.getElementById(
+      "checkpointList"
+    );
+
+  const cps =
+    [...state.checkpoints].sort(
+      (a, b) =>
+        b.date.localeCompare(a.date)
+    );
+
+  list.innerHTML = "";
+
+  if (!cps.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>Aucun checkpoint</strong>
+        <span>
+          Ajoute un update quand tu veux.
+        </span>
+      </div>
+    `;
+
+    return;
+  }
+
+  cps.forEach(cp => {
+    list.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="checkpoint">
+        <div class="checkpoint-top">
+          <strong>
+            ${esc(niceDate(cp.date))}
+          </strong>
+
+          <button
+            class="delete cp-delete"
+            data-id="${cp.id}"
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+
+        <div class="checkpoint-stats">
+          ${
+            cp.weight
+              ? `<span>⚖️ ${Number(cp.weight).toFixed(1)} lb</span>`
+              : ""
+          }
+
+          ${
+            cp.waist
+              ? `<span>📏 ${esc(cp.waist)}</span>`
+              : ""
+          }
+        </div>
+
+        ${
+          cp.comment
+            ? `<p>${esc(cp.comment)}</p>`
+            : ""
+        }
+      </div>
+      `
+    );
+  });
+
+  document
+    .querySelectorAll(".cp-delete")
+    .forEach(b => {
+      b.onclick = () => {
+        if (
+          confirm(
+            "Supprimer ce checkpoint ?"
+          )
+        ) {
+          state.checkpoints =
+            state.checkpoints.filter(
+              x =>
+                x.id !== b.dataset.id
+            );
+
+          save();
+          renderCheckpoints();
+        }
+      };
+    });
+}
+
+/* RECETTES */
+
+function renderRecipes() {
+  const grid =
+    document.getElementById(
+      "recipeGrid"
+    );
+
+  grid.innerHTML = "";
+
+  if (!state.recipes.length) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <strong>Aucune recette</strong>
+        <span>
+          Ajoute ta première recette meal prep.
+        </span>
+      </div>
+    `;
+
+    return;
+  }
+
+  state.recipes.forEach(r => {
+    const ingredients =
+      (r.ingredients || [])
+        .slice(0, 5)
+        .map(
+          x => `<span>${esc(x)}</span>`
+        )
+        .join("");
+
+    const photo =
+      r.image
+        ? `
+          <img
+            src="${esc(r.image)}"
+            alt="${esc(r.name)}"
+          >
+        `
+        : `
+          <span class="emoji">
+            ${esc(r.emoji || "🍽️")}
+          </span>
+        `;
+
+    grid.insertAdjacentHTML(
+      "beforeend",
+      `
+      <article class="recipe-card">
+        <div class="recipe-photo">
+          ${photo}
+        </div>
+
+        <div class="recipe-body">
+          <div class="recipe-top">
+            <strong>${esc(r.name)}</strong>
+
+            <span class="recipe-cal">
+              ${Math.round(r.cal)} kcal
+            </span>
+          </div>
+
+          <div class="food-macros">
+            ${fmt(r.p)}P •
+            ${fmt(r.c)}G •
+            ${fmt(r.f)}L
+          </div>
+
+          <div class="recipe-ingredients">
+            ${ingredients}
+          </div>
+
+          ${
+            r.instructions
+              ? `
+                <div class="recipe-instructions">
+                  ${esc(r.instructions)}
+                </div>
+              `
+              : ""
+          }
+
+          <div class="recipe-actions">
+            <button
+              class="secondary recipe-meal"
+              data-id="${r.id}"
+              type="button"
+            >
+              ＋ Au repas
+            </button>
+
+            <button
+              class="ghost recipe-grocery"
+              data-id="${r.id}"
+              type="button"
+            >
+              🛒 Épicerie
+            </button>
+
+            <button
+              class="ghost recipe-edit"
+              data-id="${r.id}"
+              type="button"
+            >
+              ✎
+            </button>
+
+            <button
+              class="ghost danger recipe-delete"
+              data-id="${r.id}"
+              type="button"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      </article>
+      `
+    );
+  });
+
+  document
+    .querySelectorAll(".recipe-meal")
+    .forEach(b => {
+      b.onclick = () => {
+        const r =
+          state.recipes.find(
+            x =>
+              x.id === b.dataset.id
+          );
+
+        if (!r) return;
+
+        day().foods.push({
+          id: uid(),
+          name: r.name,
+          meal: r.meal,
+          cal: r.cal,
+          p: r.p,
+          c: r.c,
+          f: r.f,
+          fi: r.fi || 0
+        });
+
+        save();
+        render();
+      };
+    });
+
+  document
+    .querySelectorAll(".recipe-grocery")
+    .forEach(b => {
+      b.onclick = () => {
+        const r =
+          state.recipes.find(
+            x =>
+              x.id === b.dataset.id
+          );
+
+        if (!r) return;
+
+        (r.ingredients || []).forEach(
+          raw => {
+            if (
+              !state.grocery.some(
+                g =>
+                  g.name.toLowerCase() ===
+                  raw.toLowerCase()
+              )
+            ) {
+              state.grocery.push({
+                id: uid(),
+                name: raw,
+                qty: "",
+                checked: false
+              });
+            }
+          }
+        );
+
+        save();
+        renderGrocery();
+      };
+    });
+
+  document
+    .querySelectorAll(".recipe-edit")
+    .forEach(b => {
+      b.onclick = () =>
+        openRecipeEdit(b.dataset.id);
+    });
+
+  document
+    .querySelectorAll(".recipe-delete")
+    .forEach(b => {
+      b.onclick = () => {
+        if (
+          confirm(
+            "Supprimer cette recette ?"
+          )
+        ) {
+          state.recipes =
+            state.recipes.filter(
+              x =>
+                x.id !== b.dataset.id
+            );
+
+          save();
+          renderRecipes();
+        }
+      };
+    });
+}
+
+function resetRecipeForm() {
+  document.getElementById(
+    "recipeForm"
+  ).reset();
+
+  document.getElementById(
+    "recipeEditId"
+  ).value = "";
+
+  document.getElementById(
+    "recipeModalTitle"
+  ).textContent =
+    "Nouvelle recette";
+
+  document.getElementById(
+    "recipeSubmitBtn"
+  ).textContent =
+    "Ajouter la recette";
+}
+
+function openRecipeEdit(id) {
+  const r =
+    state.recipes.find(
+      x => x.id === id
+    );
+
+  if (!r) return;
+
+  document.getElementById(
+    "recipeEditId"
+  ).value = r.id;
+
+  document.getElementById(
+    "recipeName"
+  ).value = r.name;
+
+  document.getElementById(
+    "recipeImage"
+  ).value = r.image || "";
+
+  document.getElementById(
+    "recipeEmoji"
+  ).value = r.emoji || "";
+
+  document.getElementById(
+    "recipeMeal"
+  ).value = r.meal;
+
+  document.getElementById(
+    "recipeCal"
+  ).value = r.cal;
+
+  document.getElementById(
+    "recipeP"
+  ).value = r.p || 0;
+
+  document.getElementById(
+    "recipeC"
+  ).value = r.c || 0;
+
+  document.getElementById(
+    "recipeF"
+  ).value = r.f || 0;
+
+  document.getElementById(
+    "recipeFi"
+  ).value = r.fi || 0;
+
+  document.getElementById(
+    "recipeIngredients"
+  ).value =
+    (r.ingredients || []).join("\n");
+
+  document.getElementById(
+    "recipeInstructions"
+  ).value =
+    r.instructions || "";
+
+  document.getElementById(
+    "recipeModalTitle"
+  ).textContent =
+    "Modifier la recette";
+
+  document.getElementById(
+    "recipeSubmitBtn"
+  ).textContent =
+    "Sauvegarder";
+
+  openModal("recipeModal");
+}
+
+/* ÉPICERIE */
+
+function renderGrocery() {
+  const list =
+    document.getElementById(
+      "groceryList"
+    );
+
+  list.innerHTML = "";
+
+  if (!state.grocery.length) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <strong>Liste vide</strong>
+        <span>
+          Ajoute des aliments manuellement ou depuis une recette.
+        </span>
+      </div>
+    `;
+
+    return;
+  }
+
+  state.grocery.forEach(g => {
+    list.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div
+        class="grocery-item ${
+          g.checked
+            ? "grocery-checked"
+            : ""
+        }"
+      >
+        <label>
+          <input
+            class="grocery-check"
+            data-id="${g.id}"
+            type="checkbox"
+            ${g.checked ? "checked" : ""}
+          >
+
+          <span class="grocery-text">
+            ${esc(g.name)}
+            ${
+              g.qty
+                ? `<small>— ${esc(g.qty)}</small>`
+                : ""
+            }
+          </span>
+        </label>
+
+        <button
+          class="delete grocery-delete"
+          data-id="${g.id}"
+          type="button"
+        >
+          ×
+        </button>
+      </div>
+      `
+    );
+  });
+
+  document
+    .querySelectorAll(".grocery-check")
+    .forEach(i => {
+      i.onchange = () => {
+        const g =
+          state.grocery.find(
+            x =>
+              x.id === i.dataset.id
+          );
+
+        if (!g) return;
+
+        g.checked = i.checked;
+
+        save();
+        renderGrocery();
+      };
+    });
+
+  document
+    .querySelectorAll(".grocery-delete")
+    .forEach(b => {
+      b.onclick = () => {
+        state.grocery =
+          state.grocery.filter(
+            x =>
+              x.id !== b.dataset.id
+          );
+
+        save();
+        renderGrocery();
+      };
+    });
+}
+
+/* FAVORIS */
+
+function renderPresets() {
+  const grid =
+    document.getElementById(
+      "presetGrid"
+    );
+
+  grid.innerHTML = "";
+
+  state.presets.forEach((p, i) => {
+    grid.insertAdjacentHTML(
+      "beforeend",
+      `
+      <button
+        class="preset"
+        data-preset="${i}"
+        type="button"
+      >
+        <strong>${esc(p.name)}</strong>
+        <span>
+          ${p.cal} kcal •
+          ${p.p}P •
+          ${p.c}G •
+          ${p.f}L
+        </span>
+      </button>
+      `
+    );
+  });
+
+  document
+    .querySelectorAll("[data-preset]")
+    .forEach(el => {
+      el.onclick = () => {
+        const p =
+          state.presets[
+            Number(el.dataset.preset)
+          ];
+
+        day().foods.push({
+          ...p,
+          id: uid()
+        });
+
+        save();
+        render();
+      };
+    });
+}
+
+/* ÉVÉNEMENTS */
 
 document.getElementById(
   "addFoodBtn"
@@ -1184,7 +1617,7 @@ document.getElementById(
       "foodEditId"
     ).value;
 
-  const food = {
+  const f = {
     id: id || uid(),
 
     meal:
@@ -1234,16 +1667,16 @@ document.getElementById(
   };
 
   if (id) {
-    const index =
-      getDay().foods.findIndex(
+    const i =
+      day().foods.findIndex(
         x => x.id === id
       );
 
-    if (index >= 0) {
-      getDay().foods[index] = food;
+    if (i >= 0) {
+      day().foods[i] = f;
     }
   } else {
-    getDay().foods.push(food);
+    day().foods.push(f);
   }
 
   save();
@@ -1252,12 +1685,73 @@ document.getElementById(
   render();
 };
 
-/* GYM */
+document.getElementById(
+  "foodSearchBtn"
+).onclick = searchFoods;
+
+document.getElementById(
+  "foodSearchInput"
+).addEventListener(
+  "keydown",
+  e => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      searchFoods();
+    }
+  }
+);
+
+/* NAVIGATION CALENDRIER */
+
+document.getElementById(
+  "todayBtn"
+).onclick = () => {
+  selectedDate = today();
+
+  const n = new Date();
+
+  calendarCursor =
+    new Date(
+      n.getFullYear(),
+      n.getMonth(),
+      1
+    );
+
+  render();
+};
+
+document.getElementById(
+  "prevMonthBtn"
+).onclick = () => {
+  calendarCursor =
+    new Date(
+      calendarCursor.getFullYear(),
+      calendarCursor.getMonth() - 1,
+      1
+    );
+
+  renderCalendar();
+};
+
+document.getElementById(
+  "nextMonthBtn"
+).onclick = () => {
+  calendarCursor =
+    new Date(
+      calendarCursor.getFullYear(),
+      calendarCursor.getMonth() + 1,
+      1
+    );
+
+  renderCalendar();
+};
+
+/* TRAINING */
 
 document.getElementById(
   "saveTrainingBtn"
 ).onclick = () => {
-  getDay().training = {
+  day().training = {
     done:
       document.getElementById(
         "gymDone"
@@ -1282,7 +1776,7 @@ document.getElementById(
 document.getElementById(
   "gymDone"
 ).onchange = e => {
-  getDay().training.done =
+  day().training.done =
     e.target.checked;
 
   save();
@@ -1293,7 +1787,7 @@ document.getElementById(
 document.getElementById(
   "saveCommentBtn"
 ).onclick = () => {
-  getDay().comment =
+  day().comment =
     document.getElementById(
       "dailyComment"
     ).value.trim();
@@ -1307,10 +1801,10 @@ document.getElementById(
 
 document
   .querySelectorAll("[data-water]")
-  .forEach(button => {
-    button.onclick = () => {
-      getDay().water +=
-        Number(button.dataset.water);
+  .forEach(b => {
+    b.onclick = () => {
+      day().water +=
+        Number(b.dataset.water);
 
       save();
       renderWater();
@@ -1320,7 +1814,7 @@ document
 document.getElementById(
   "waterReset"
 ).onclick = () => {
-  getDay().water = 0;
+  day().water = 0;
 
   save();
   renderWater();
@@ -1374,7 +1868,7 @@ document.getElementById(
   render();
 };
 
-/* CHECKPOINTS */
+/* CHECKPOINT */
 
 document.getElementById(
   "addCheckpointBtn"
@@ -1383,16 +1877,16 @@ document.getElementById(
     "checkpointDate"
   ).value = selectedDate;
 
-  const weight =
+  const w =
     state.weights.find(
-      w =>
-        w.date === selectedDate
+      x =>
+        x.date === selectedDate
     );
 
   document.getElementById(
     "checkpointWeight"
   ).value =
-    weight ? weight.value : "";
+    w ? w.value : "";
 
   openModal("checkpointModal");
 };
@@ -1437,27 +1931,157 @@ document.getElementById(
   renderCheckpoints();
 };
 
+/* RECETTES */
+
+document.getElementById(
+  "addRecipeBtn"
+).onclick = () => {
+  resetRecipeForm();
+  openModal("recipeModal");
+};
+
+document.getElementById(
+  "recipeForm"
+).onsubmit = e => {
+  e.preventDefault();
+
+  const id =
+    document.getElementById(
+      "recipeEditId"
+    ).value;
+
+  const r = {
+    id: id || uid(),
+
+    name:
+      document.getElementById(
+        "recipeName"
+      ).value.trim(),
+
+    image:
+      document.getElementById(
+        "recipeImage"
+      ).value.trim(),
+
+    emoji:
+      document.getElementById(
+        "recipeEmoji"
+      ).value.trim() || "🍽️",
+
+    meal:
+      document.getElementById(
+        "recipeMeal"
+      ).value,
+
+    cal:
+      Number(
+        document.getElementById(
+          "recipeCal"
+        ).value
+      ) || 0,
+
+    p:
+      Number(
+        document.getElementById(
+          "recipeP"
+        ).value
+      ) || 0,
+
+    c:
+      Number(
+        document.getElementById(
+          "recipeC"
+        ).value
+      ) || 0,
+
+    f:
+      Number(
+        document.getElementById(
+          "recipeF"
+        ).value
+      ) || 0,
+
+    fi:
+      Number(
+        document.getElementById(
+          "recipeFi"
+        ).value
+      ) || 0,
+
+    ingredients:
+      document.getElementById(
+        "recipeIngredients"
+      )
+      .value
+      .split("\n")
+      .map(x => x.trim())
+      .filter(Boolean),
+
+    instructions:
+      document.getElementById(
+        "recipeInstructions"
+      ).value.trim()
+  };
+
+  if (id) {
+    const i =
+      state.recipes.findIndex(
+        x => x.id === id
+      );
+
+    if (i >= 0) {
+      state.recipes[i] = r;
+    }
+  } else {
+    state.recipes.push(r);
+  }
+
+  save();
+  resetRecipeForm();
+  closeModal("recipeModal");
+  renderRecipes();
+};
+
 /* ÉPICERIE */
 
 document.getElementById(
-  "resetGroceryBtn"
-).onclick = () => {
-  if (!state.grocery.length) return;
+  "groceryForm"
+).onsubmit = e => {
+  e.preventDefault();
 
-  if (
-    confirm(
-      "Décocher tous les articles de la liste d'épicerie ?"
-    )
-  ) {
-    state.grocery.forEach(
-      item => {
-        item.checked = false;
-      }
+  state.grocery.push({
+    id: uid(),
+
+    name:
+      document.getElementById(
+        "groceryName"
+      ).value.trim(),
+
+    qty:
+      document.getElementById(
+        "groceryQty"
+      ).value.trim(),
+
+    checked: false
+  });
+
+  save();
+
+  e.target.reset();
+
+  renderGrocery();
+};
+
+document.getElementById(
+  "clearCheckedGroceryBtn"
+).onclick = () => {
+  state.grocery =
+    state.grocery.filter(
+      x => !x.checked
     );
 
-    save();
-    renderGrocery();
-  }
+  save();
+  renderGrocery();
 };
 
 /* RÉGLAGES */
@@ -1465,31 +2089,29 @@ document.getElementById(
 document.getElementById(
   "settingsBtn"
 ).onclick = () => {
-  const s = state.settings;
-
   document.getElementById(
     "setCal"
-  ).value = s.cal;
+  ).value = state.settings.cal;
 
   document.getElementById(
     "setP"
-  ).value = s.p;
+  ).value = state.settings.p;
 
   document.getElementById(
     "setC"
-  ).value = s.c;
+  ).value = state.settings.c;
 
   document.getElementById(
     "setF"
-  ).value = s.f;
+  ).value = state.settings.f;
 
   document.getElementById(
     "setFi"
-  ).value = s.fi;
+  ).value = state.settings.fi;
 
   document.getElementById(
     "setWater"
-  ).value = s.water;
+  ).value = state.settings.water;
 
   openModal("settingsModal");
 };
@@ -1550,33 +2172,40 @@ document.getElementById(
   render();
 };
 
-/* MODALS */
+/* FERMETURE DES MODALES */
 
 document
   .querySelectorAll("[data-close]")
-  .forEach(button => {
-    button.onclick = () => {
+  .forEach(b => {
+    b.onclick = () => {
       closeModal(
-        button.dataset.close
+        b.dataset.close
       );
 
       if (
-        button.dataset.close ===
+        b.dataset.close ===
         "foodModal"
       ) {
         resetFoodForm();
+      }
+
+      if (
+        b.dataset.close ===
+        "recipeModal"
+      ) {
+        resetRecipeForm();
       }
     };
   });
 
 document
   .querySelectorAll(".modal")
-  .forEach(modal => {
-    modal.addEventListener(
+  .forEach(m => {
+    m.addEventListener(
       "click",
       e => {
-        if (e.target === modal) {
-          modal.classList.add(
+        if (e.target === m) {
+          m.classList.add(
             "hidden"
           );
         }
@@ -1589,18 +2218,19 @@ document
 document.getElementById(
   "exportBtn"
 ).onclick = () => {
-  const blob = new Blob(
-    [
-      JSON.stringify(
-        state,
-        null,
-        2
-      )
-    ],
-    {
-      type: "application/json"
-    }
-  );
+  const blob =
+    new Blob(
+      [
+        JSON.stringify(
+          state,
+          null,
+          2
+        )
+      ],
+      {
+        type: "application/json"
+      }
+    );
 
   const a =
     document.createElement("a");
@@ -1625,73 +2255,20 @@ document.getElementById(
 document.getElementById(
   "importInput"
 ).onchange = e => {
-  const file =
+  const f =
     e.target.files[0];
 
-  if (!file) return;
+  if (!f) return;
 
-  const reader =
+  const r =
     new FileReader();
 
-  reader.onload = () => {
+  r.onload = () => {
     try {
-      const imported =
-        JSON.parse(reader.result);
-
-      if (
-        !imported ||
-        typeof imported !==
-          "object"
-      ) {
-        throw new Error();
-      }
-
-      state = imported;
-
-      state.settings = {
-        ...defaultState.settings,
-        ...(state.settings || {})
-      };
-
-      state.days =
-        state.days || {};
-
-      state.weights =
-        Array.isArray(
-          state.weights
-        )
-          ? state.weights
-          : [];
-
-      state.checkpoints =
-        Array.isArray(
-          state.checkpoints
-        )
-          ? state.checkpoints
-          : [];
-
-      state.grocery =
-        Array.isArray(
-          state.grocery
-        )
-          ? state.grocery
-          : [];
-
-      state.presets =
-        Array.isArray(
-          state.presets
-        ) &&
-        state.presets.length
-          ? state.presets
-          : cloneDefaults().presets;
-
-      state.recipes =
-        Array.isArray(
-          state.recipes
-        ) &&
-        state.recipes.length
-          ? state.recipes
-          : cloneDefaults().recipes;
+      state =
+        migrate(
+          JSON.parse(r.result)
+        );
 
       save();
       render();
@@ -1704,10 +2281,8 @@ document.getElementById(
     }
   };
 
-  reader.readAsText(file);
+  r.readAsText(f);
 };
-
-/* RESET */
 
 document.getElementById(
   "resetAllBtn"
@@ -1722,198 +2297,16 @@ document.getElementById(
   }
 };
 
+/* DÉMARRAGE */
+
 save();
 render();
+
+/* SERVICE WORKER */
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("sw.js")
+    .then(reg => reg.update())
     .catch(() => {});
 }
-/* RECHERCHE AUTOMATIQUE D'ALIMENTS */
-
-(function initFoodSearch(){
-
-  const form = document.getElementById("foodForm");
-  const nameLabel = document.getElementById("foodName").closest("label");
-
-  if (!form || !nameLabel || document.getElementById("foodSearchBox")) return;
-
-  const box = document.createElement("div");
-  box.id = "foodSearchBox";
-
-  box.innerHTML = `
-    <div style="margin:12px 0;padding:12px;background:#20242c;border:1px solid #2a303a;border-radius:14px">
-      <div style="color:#ffb347;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">
-        Recherche automatique
-      </div>
-
-      <div style="display:flex;gap:8px">
-        <input
-          id="foodSearchInput"
-          placeholder="Ex. yogourt grec, Cheerios..."
-          style="margin:0"
-        />
-
-        <button
-          type="button"
-          id="foodSearchBtn"
-          class="secondary"
-        >
-          Rechercher
-        </button>
-      </div>
-
-      <div id="foodSearchStatus" class="hint" style="margin-top:8px"></div>
-      <div id="foodSearchResults" style="display:grid;gap:8px;margin-top:10px"></div>
-    </div>
-  `;
-
-  nameLabel.parentNode.insertBefore(box, nameLabel);
-
-  const searchInput = document.getElementById("foodSearchInput");
-  const searchBtn = document.getElementById("foodSearchBtn");
-  const status = document.getElementById("foodSearchStatus");
-  const results = document.getElementById("foodSearchResults");
-
-  function nutrient(product, key) {
-    return Number(product?.nutriments?.[key] || 0);
-  }
-
-  searchBtn.onclick = async () => {
-
-    const query = searchInput.value.trim();
-
-    if (query.length < 2) {
-      status.textContent = "Écris au moins 2 lettres.";
-      return;
-    }
-
-    status.textContent = "Recherche...";
-    results.innerHTML = "";
-    searchBtn.disabled = true;
-
-    try {
-
-      const url =
-        "https://world.openfoodfacts.org/cgi/search.pl" +
-        "?search_terms=" + encodeURIComponent(query) +
-        "&search_simple=1" +
-        "&action=process" +
-        "&json=1" +
-        "&page_size=8" +
-        "&fields=product_name,brands,nutriments";
-
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error("Recherche impossible");
-      }
-
-      const data = await response.json();
-
-      const products = (data.products || []).filter(product =>
-        product.product_name &&
-        product.nutriments &&
-        (
-          product.nutriments["energy-kcal_100g"] ||
-          product.nutriments.proteins_100g
-        )
-      );
-
-      if (!products.length) {
-        status.textContent = "Aucun résultat trouvé.";
-        return;
-      }
-
-      status.textContent =
-        "Choisis un produit. Les valeurs sont calculées selon la quantité.";
-
-      products.forEach((product, index) => {
-
-        const cal = nutrient(product, "energy-kcal_100g");
-        const p = nutrient(product, "proteins_100g");
-        const c = nutrient(product, "carbohydrates_100g");
-        const f = nutrient(product, "fat_100g");
-        const fi = nutrient(product, "fiber_100g");
-
-        const button = document.createElement("button");
-
-        button.type = "button";
-        button.className = "preset";
-
-        button.innerHTML = `
-          <strong>${escapeHtml(product.product_name)}</strong>
-          <span>
-            ${product.brands ? escapeHtml(product.brands) + " • " : ""}
-            ${Math.round(cal)} kcal / 100 g
-          </span>
-        `;
-
-        button.onclick = () => {
-
-          let grams = prompt(
-            "Quelle quantité en grammes ?",
-            "100"
-          );
-
-          if (grams === null) return;
-
-          grams = Number(String(grams).replace(",", "."));
-
-          if (!grams || grams <= 0 || grams > 5000) {
-            alert("Quantité invalide.");
-            return;
-          }
-
-          const multiplier = grams / 100;
-
-          document.getElementById("foodName").value =
-            product.product_name;
-
-          document.getElementById("foodCal").value =
-            Math.round(cal * multiplier);
-
-          document.getElementById("foodP").value =
-            (p * multiplier).toFixed(1);
-
-          document.getElementById("foodC").value =
-            (c * multiplier).toFixed(1);
-
-          document.getElementById("foodF").value =
-            (f * multiplier).toFixed(1);
-
-          document.getElementById("foodFi").value =
-            (fi * multiplier).toFixed(1);
-
-          status.textContent =
-            `${product.product_name} — ${grams} g sélectionnés.`;
-
-          results.innerHTML = "";
-        };
-
-        results.appendChild(button);
-      });
-
-    } catch (error) {
-
-      console.error(error);
-
-      status.textContent =
-        "La recherche ne répond pas pour le moment. Tu peux toujours entrer les valeurs manuellement.";
-
-    } finally {
-
-      searchBtn.disabled = false;
-
-    }
-  };
-
-  searchInput.addEventListener("keydown", event => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      searchBtn.click();
-    }
-  });
-
-})();
